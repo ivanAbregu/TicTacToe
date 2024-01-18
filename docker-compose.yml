@@ -1,0 +1,25 @@
+version: '3.1'
+services:
+  db:
+    image: postgres:12
+    container_name: db
+    env_file: ./docker/.env
+
+  backend-tictactoe:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+    image: backend-tictactoe
+    container_name: backend-tictactoe
+    command: bash -c "sleep 4 && sh ./docker/entrypoint.sh"
+    env_file:
+      - ./docker/.env
+    volumes:
+      - .:/code
+    ports:
+      - 80:80
+    ######### stdin_open and tty to debug
+    stdin_open: true
+    tty: true
+    links:
+      - db
