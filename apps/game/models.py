@@ -5,12 +5,26 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 class Game(models.Model):
+
+    STATUS_PENDING = "pending"
+    STATUS_STARTED = "started"
+    STATUS_OVER = "over"
+
+    STATUS_CHOICES = (
+        (STATUS_PENDING, "Pending"),
+        (STATUS_STARTED, "Started"),
+        (STATUS_OVER, "Over"),
+    )
+
     created = models.DateTimeField(auto_now_add=True)
     player1 = models.ForeignKey(User, on_delete=models.CASCADE, related_name='games_as_player1')
     player2 = models.ForeignKey(User, on_delete=models.CASCADE, related_name='games_as_player2')
     current_player = models.ForeignKey(User, on_delete=models.CASCADE, related_name='games_as_current_player')
     winner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='games_won', blank=True, null=True)
     board = models.JSONField(default=[[' ', ' ', ' '], [' ', ' ', ' '], [' ', ' ', ' ']])
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING
+    )
     # board = models.CharField(max_length=9, default=' ' * 9)
 
     @property
@@ -19,7 +33,11 @@ class Game(models.Model):
 
     @property
     def is_over(self):
-        return self.movements_played == 9 or self.winner is not None
+        return self.status == self.STATUS_OVER
+
+    @property
+    def can_move(self):
+        return self.movements_played < 9
 
     @property
     def is_player_win(self):

@@ -4,10 +4,12 @@ from django.shortcuts import get_object_or_404
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework import status
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.response import Response
 
 from apps.game.models import Game
 from .serializers import GameSerializer, CreateGameSerializer, PlayInputSerializer
+from .filters import GameFilter
 
 from django.contrib.auth import get_user_model
 
@@ -46,6 +48,8 @@ class gameViewSet(ModelViewSet):
 
     queryset = Game.objects.all().order_by("-created")
     serializer_class = GameSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = GameFilter
     
     def create(self, request, *args, **kwargs):
         entry_serializer = CreateGameSerializer(data=request.data)
@@ -125,12 +129,19 @@ class gameViewSet(ModelViewSet):
     def update_game_state(self, game, row, column):
         player = game.current_player
         game.board[row][column] = player.symbol
-        if game.is_player_win:
+        if game.status == game.STATUS_PENDING:
+            game.status = game.STATUS_STARTED
+            game.current_player = self.get_next_player(game)
+        elif game.is_player_win:
             game.winner = player
+            game.status = game.STATUS_OVER
             player.score += 1
-            player.save() 
+            player.save()
+        elif not game.can_move:
+            game.status = game.STATUS_OVER
         else:
             game.current_player = self.get_next_player(game)
+
         game.save()
 
     def get_next_player(self, game):
